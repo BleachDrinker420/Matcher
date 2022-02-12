@@ -612,9 +612,6 @@ public class ClassFeatureExtractor implements LocalClassEnv {
 			// try shared artificial class
 			if (sharedRet != null) return sharedRet;
 
-			// create shared missing class
-			//ret = env.getMissingCls(id, createUnknown);
-
 			// try shared jvm-cp class
 			if ((ret = env.getMissingCls(id, false)) != null || !createUnknown) return ret;
 

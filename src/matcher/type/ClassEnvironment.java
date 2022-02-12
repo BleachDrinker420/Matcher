@@ -357,13 +357,6 @@ public final class ClassEnvironment implements ClassEnv {
 
 	ClassInstance getMissingCls(String id, boolean createUnknown) {
 		if (id.length() > 1) {
-			ClassInstance a = extractorA.getLocalClsById(id);
-			ClassInstance b = extractorB.getLocalClsById(id);
-
-			if (a != null && a.isReal() || b != null && b.isReal()) {
-				throw new InvalidSharedEnvQueryException(a, b);
-			}
-
 			String name = ClassInstance.getName(id);
 			Path file = getSharedClassLocation(name);
 

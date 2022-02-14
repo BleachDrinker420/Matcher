@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -15,14 +13,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
-import matcher.NameType;
 import matcher.classifier.ClassClassifier;
 import matcher.classifier.ClassifierLevel;
 import matcher.classifier.FieldClassifier;
 import matcher.classifier.MethodClassifier;
 import matcher.classifier.MethodVarClassifier;
 import matcher.classifier.RankResult;
-import matcher.type.ClassEnv;
 import matcher.type.ClassEnvironment;
 import matcher.type.ClassInstance;
 import matcher.type.FieldInstance;
@@ -309,22 +305,9 @@ public class MatchPaneDst extends SplitPane implements IFwdGuiComponent, ISelect
 		if (filterStr.isBlank()) {
 			newItems.addAll(rankResults);
 		} else {
-			List<Object> stack = new ArrayList<>();
-
 			for (RankResult<? extends Matchable<?>> item : rankResults) {
-				stack.add(item);
-
-				Boolean res = evalFilter(stack, item);
-
-				if (res == null) { // eval failed
-					newItems.clear();
-					newItems.addAll(rankResults);
-					break;
-				} else if (res) {
+				if (item.getSubject().getName().toLowerCase().contains(filterStr.toLowerCase()))
 					newItems.add(item);
-				}
-
-				stack.clear();
 			}
 		}
 
@@ -353,269 +336,6 @@ public class MatchPaneDst extends SplitPane implements IFwdGuiComponent, ISelect
 		}
 
 		suppressChangeEvents = false;
-	}
-
-	@SuppressWarnings("unchecked")
-	private Boolean evalFilter(List<Object> stack, RankResult<? extends Matchable<?>> resB) {
-		final byte OP_TYPE_NONE = 0;
-		final byte OP_TYPE_ANY = 1;
-		final byte OP_TYPE_MATCHABLE = 2;
-		final byte OP_TYPE_CLASS = 3;
-		final byte OP_TYPE_STRING = 4;
-		final byte OP_TYPE_BOOL = 5;
-		final byte OP_TYPE_INT = 6;
-		final byte OP_TYPE_COMPARABLE = 7;
-
-		String filterStr = filterField.getText();
-		if (filterStr.isBlank()) return Boolean.TRUE;
-
-		Matchable<?> itemB = resB.getSubject();
-		Matchable<?> itemA;
-
-		if (itemB instanceof ClassInstance) {
-			itemA = srcPane.getSelectedClass();
-		} else if (itemB instanceof MethodInstance) {
-			itemA = srcPane.getSelectedMethod();
-		} else if (itemB instanceof FieldInstance) {
-			itemA = srcPane.getSelectedField();
-		} else if (itemB instanceof MethodVarInstance) {
-			itemA = srcPane.getSelectedMethodVar();
-		} else {
-			throw new IllegalStateException();
-		}
-
-		assert itemA != null;
-
-		ClassEnv env = gui.getEnv().getEnvB();
-		String[] parts = filterStr.split("\\s+");
-
-		for (String part : parts) {
-			String op = part.toLowerCase(Locale.ENGLISH);
-			//System.out.printf("stack: %s, op: %s%n", stack, op);
-			byte opTypeA = OP_TYPE_NONE;
-			byte opTypeB = OP_TYPE_NONE;
-
-			switch (op) {
-			case "a":
-			case "b":
-				break;
-			case "dup":
-				opTypeA = OP_TYPE_ANY;
-				break;
-			case "name":
-			case "mapped":
-			case "mappedname":
-			case "aux":
-			case "auxname":
-			case "aux2":
-			case "aux2name":
-				opTypeA = OP_TYPE_MATCHABLE;
-				break;
-			case "supercls":
-				opTypeA = OP_TYPE_CLASS;
-				break;
-			case "instanceof":
-				opTypeA = OP_TYPE_CLASS;
-				opTypeB = OP_TYPE_CLASS;
-				break;
-			case "swap":
-			case "eq":
-			case "equals":
-				opTypeA = opTypeB = OP_TYPE_ANY;
-				break;
-			case "and":
-			case "or":
-				opTypeA = opTypeB = OP_TYPE_BOOL;
-				break;
-			case "not":
-				opTypeA = OP_TYPE_BOOL;
-				break;
-			case "startswith":
-			case "endswith":
-			case "contains":
-				opTypeA =  opTypeB = OP_TYPE_STRING;
-				break;
-			case "class":
-			case "package":
-				opTypeA = OP_TYPE_STRING;
-				break;
-			default:
-				if (part.length() >= 2 && part.charAt(0) == '"' && part.charAt(part.length() - 1) == '"') {
-					part = part.substring(0, part.length() - 1);
-				}
-
-				stack.add(part);
-				break;
-			}
-
-			Object opA = null;
-			Object opB = null;
-
-			for (int i = 0; i < 2; i++) {
-				byte type = i == 0 ? opTypeB : opTypeA;
-				if (type == OP_TYPE_NONE) continue;
-
-				if (stack.isEmpty()) {
-					System.err.println("stack underflow");
-					return null;
-				}
-
-				Object operand = stack.remove(stack.size() - 1);
-
-				boolean valid = type == OP_TYPE_ANY
-						|| type == OP_TYPE_MATCHABLE && (operand instanceof RankResult<?> || operand instanceof Matchable<?>)
-						|| type == OP_TYPE_CLASS && (operand instanceof RankResult<?> || operand instanceof ClassInstance || operand instanceof String)
-						|| type == OP_TYPE_STRING && operand instanceof String
-						|| type == OP_TYPE_BOOL && operand instanceof Boolean
-						|| type == OP_TYPE_INT && operand instanceof Integer
-						|| type == OP_TYPE_COMPARABLE && operand instanceof Comparable<?>;
-
-				if (!valid) {
-					System.err.println("invalid operand type");
-					return null;
-				}
-
-				if (type == OP_TYPE_MATCHABLE && operand instanceof RankResult<?>) {
-					operand = ((RankResult<? extends Matchable<?>>) operand).getSubject();
-				} else if (type == OP_TYPE_CLASS && operand instanceof RankResult<?>) {
-					operand = getClass(((RankResult<? extends Matchable<?>>) operand).getSubject());
-				} else if (type == OP_TYPE_CLASS && operand instanceof String) {
-					ClassInstance cls = env.getClsByName((String) operand);
-
-					if (cls == null) {
-						System.err.println("unknown class "+operand);
-						return null;
-					} else {
-						operand = cls;
-					}
-				}
-
-				if (i == 0) {
-					opB = operand;
-				} else {
-					opA = operand;
-				}
-			}
-
-			//System.out.printf("opA: %s, opB: %s%n", opA, opB);
-
-			switch (op) {
-			case "a":
-				stack.add(itemA);
-				break;
-			case "b":
-				stack.add(resB);
-				break;
-			case "dup":
-				stack.add(opA);
-				stack.add(opA);
-				break;
-			case "swap":
-				stack.add(opB);
-				stack.add(opA);
-				break;
-			case "name":
-				stack.add(((Matchable<?>) opA).getName());
-				break;
-			case "mapped":
-			case "mappedname":
-				stack.add(((Matchable<?>) opA).getName(NameType.MAPPED_PLAIN));
-				break;
-			case "aux":
-			case "auxname":
-				stack.add(((Matchable<?>) opA).getName(NameType.AUX_PLAIN));
-				break;
-			case "aux2":
-			case "aux2name":
-				stack.add(((Matchable<?>) opA).getName(NameType.AUX2_PLAIN));
-				break;
-			case "supercls":
-				stack.add(((ClassInstance) opA).getSuperClass());
-				break;
-			case "instanceof":
-				stack.add(((ClassInstance) opB).isAssignableFrom((ClassInstance) opA));
-				break;
-			case "eq":
-			case "equals":
-				stack.add(checkEquality(opA, opB, env));
-				break;
-			case "and":
-				stack.add(Boolean.logicalAnd((Boolean) opA, (Boolean) opB));
-				break;
-			case "or":
-				stack.add(Boolean.logicalOr((Boolean) opA, (Boolean) opB));
-				break;
-			case "not":
-				stack.add(!((Boolean) opA));
-				break;
-			case "startswith":
-				stack.add(((String) opA).startsWith((String) opB));
-				break;
-			case "endswith":
-				stack.add(((String) opA).endsWith((String) opB));
-				break;
-			case "contains":
-				stack.add(((String) opA).contains((String) opB));
-				break;
-			case "class": { // extract class (cls) from some/pkg/cls
-				String s = (String) opA;
-				stack.add(s.substring(s.lastIndexOf('/') + 1));
-				break;
-			}
-			case "package": { // extract package (some/pkg) from some/pkg/cls
-				String s = (String) opA;
-				int end = s.lastIndexOf('/');
-				stack.add(end < 0 ? s : s.substring(0, end));
-				break;
-			}
-			}
-		}
-
-		//System.out.printf("res stack: %s%n", stack);
-
-		if (stack.isEmpty() || stack.size() > 2) {
-			System.err.println("no result");
-			return null;
-		} else if (stack.size() == 1) {
-			if (stack.get(0) instanceof Boolean) {
-				return (Boolean) stack.get(0);
-			} else {
-				System.err.println("invalid result");
-				return null;
-			}
-		} else { // 2 elements on the stack, use equals
-			return checkEquality(stack.get(0), stack.get(1), env);
-		}
-	}
-
-	private static boolean checkEquality(Object a, Object b, ClassEnv env) {
-		if (a == b) return true;
-		if (a == null || b == null) return false;
-
-		if (a.getClass() != b.getClass()) {
-			if (a instanceof RankResult<?>) a = ((RankResult<?>) a).getSubject();
-			if (b instanceof RankResult<?>) b = ((RankResult<?>) b).getSubject();
-		}
-
-		if (a.getClass() != b.getClass()) {
-			if (a instanceof ClassInstance) {
-				if (b instanceof Matchable<?>) {
-					b = getClass((Matchable<?>) b);
-				} else if (b instanceof String) {
-					b = env.getClsByName((String) b);
-				}
-			}
-
-			if (b instanceof ClassInstance) {
-				if (a instanceof Matchable<?>) {
-					a = getClass((Matchable<?>) a);
-				} else if (a instanceof String) {
-					a = env.getClsByName((String) a);
-				}
-			}
-		}
-
-		return Objects.equals(a, b);
 	}
 
 	private class SrcListener implements IGuiComponent {

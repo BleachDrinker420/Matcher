@@ -135,22 +135,21 @@ public class HtmlPrinter extends DefaultPrettyPrinterVisitor {
 				.addOption(new DefaultConfigurationOption(ConfigOption.MAX_ENUM_CONSTANTS_TO_ALIGN_HORIZONTALLY, 1)));
 		this.typeResolver = typeResolver;
 	}
-	
+
 	@Override
 	protected void printMembers(final NodeList<BodyDeclaration<?>> members, final Void arg) {
 		BodyDeclaration<?> prev = null;
-        for (final BodyDeclaration<?> member : members) {
-            printer.println();
-            member.accept(this, arg);
-            if (prev instanceof FieldDeclaration fPrev && member instanceof FieldDeclaration fMember
-            		&& fPrev.isStatic() == fMember.isStatic() && fMember.getAnnotations().isEmpty()) {
-            } else {
-            	printer.println();
-            }
-            
-            prev = member;
-        }
-    }
+		for (final BodyDeclaration<?> member : members) {
+			printer.println();
+			member.accept(this, arg);
+			if (!(prev instanceof FieldDeclaration fPrev && member instanceof FieldDeclaration fMember
+					&& fPrev.isStatic() == fMember.isStatic() && fMember.getAnnotations().isEmpty())) {
+				printer.println();
+			}
+
+			prev = member;
+		}
+	}
 
 	@Override
 	public void printModifiers(final NodeList<Modifier> modifiers) {

@@ -273,7 +273,7 @@ public class Gui extends Application {
 	public void runProgressTask(String labelText, Consumer<DoubleConsumer> task, Runnable onSuccess, Consumer<Throwable> onError) {
 		Stage stage = new Stage(StageStyle.UTILITY);
 		stage.initOwner(this.scene.getWindow());
-		VBox pane = new VBox(GuiConstants.padding);
+		VBox pane = new VBox(GuiConstants.PADDING);
 
 		stage.setScene(new Scene(pane));
 		stage.initModality(Modality.APPLICATION_MODAL);
@@ -281,7 +281,7 @@ public class Gui extends Application {
 		stage.setResizable(false);
 		stage.setTitle("Operation progress");
 
-		pane.setPadding(new Insets(GuiConstants.padding));
+		pane.setPadding(new Insets(GuiConstants.PADDING));
 
 		pane.getChildren().add(new Label(labelText));
 

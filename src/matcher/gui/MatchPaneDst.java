@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -300,14 +301,16 @@ public class MatchPaneDst extends SplitPane implements IFwdGuiComponent, ISelect
 
 	private void updateResults(Matchable<?> oldSelection) {
 		List<RankResult<? extends Matchable<?>>> newItems = new ArrayList<>(rankResults.size());
-		String filterStr = filterField.getText();
+		String filterText = filterField.getText().toLowerCase(Locale.ENGLISH);
 
-		if (filterStr.isBlank()) {
+		if (filterText.isBlank()) {
 			newItems.addAll(rankResults);
 		} else {
 			for (RankResult<? extends Matchable<?>> item : rankResults) {
-				if (item.getSubject().getName().toLowerCase().contains(filterStr.toLowerCase()))
+				Matchable<?> matchable = item.getSubject();
+				if (matchable.getDisplayName(gui.getNameType(), matchable instanceof ClassInstance).toLowerCase(Locale.ENGLISH).contains(filterText)) {
 					newItems.add(item);
+				}
 			}
 		}
 

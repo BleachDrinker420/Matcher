@@ -140,12 +140,14 @@ public class HtmlPrinter extends DefaultPrettyPrinterVisitor {
 	protected void printMembers(final NodeList<BodyDeclaration<?>> members, final Void arg) {
 		BodyDeclaration<?> prev = null;
 		for (final BodyDeclaration<?> member : members) {
-			printer.println();
-			member.accept(this, arg);
+			// Don't add a newline when multiple field are after each other
 			if (!(prev instanceof FieldDeclaration fPrev && member instanceof FieldDeclaration fMember
 					&& fPrev.isStatic() == fMember.isStatic() && fMember.getAnnotations().isEmpty())) {
 				printer.println();
 			}
+
+			member.accept(this, arg);
+			printer.println();
 
 			prev = member;
 		}

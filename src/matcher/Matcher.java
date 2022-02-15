@@ -746,8 +746,16 @@ public class Matcher {
 			matches.values().removeAll(conflictingMatches);
 		}
 	}
+	
+	public MatchingStatus getStatusA(boolean inputsOnly) {
+		return getStatus(env.getClassesA(), inputsOnly);
+	}
+	
+	public MatchingStatus getStatusB(boolean inputsOnly) {
+		return getStatus(env.getClassesB(), inputsOnly);
+	}
 
-	public MatchingStatus getStatus(boolean inputsOnly) {
+	private MatchingStatus getStatus(Collection<ClassInstance> classes, boolean inputsOnly) {
 		int totalClassCount = 0;
 		int matchedClassCount = 0;
 		int totalMethodCount = 0;
@@ -759,7 +767,7 @@ public class Matcher {
 		int totalFieldCount = 0;
 		int matchedFieldCount = 0;
 
-		for (ClassInstance cls : env.getClassesA()) {
+		for (ClassInstance cls : classes) {
 			if (inputsOnly && !cls.isInput()) continue;
 
 			totalClassCount++;

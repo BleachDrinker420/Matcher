@@ -49,9 +49,13 @@ public class MatchingMenu extends Menu {
 
 		getItems().add(new SeparatorMenuItem());
 
-		menuItem = new MenuItem("Status");
+		menuItem = new MenuItem("Status (A)");
 		getItems().add(menuItem);
-		menuItem.setOnAction(event -> showMatchingStatus());
+		menuItem.setOnAction(event -> showMatchingStatus("A", gui.getMatcher().getStatusA(true)));
+		
+		menuItem = new MenuItem("Status (B)");
+		getItems().add(menuItem);
+		menuItem.setOnAction(event -> showMatchingStatus("B", gui.getMatcher().getStatusB(true)));
 	}
 
 	public void autoMatchAll() {
@@ -102,10 +106,8 @@ public class MatchingMenu extends Menu {
 				Throwable::printStackTrace);
 	}
 
-	public void showMatchingStatus() {
-		MatchingStatus status = gui.getMatcher().getStatus(true);
-
-		gui.showAlert(AlertType.INFORMATION, "Matching status", "Current matching status",
+	public void showMatchingStatus(String name, MatchingStatus status) {
+		gui.showAlert(AlertType.INFORMATION, "Matching status", "Current matching status (" + name + ")",
 				String.format("Classes: %d / %d (%.2f%%)%nMethods: %d / %d (%.2f%%)%nFields: %d / %d (%.2f%%)%nMethod args: %d / %d (%.2f%%)%nMethod vars: %d / %d (%.2f%%)",
 						status.matchedClassCount, status.totalClassCount, (status.totalClassCount == 0 ? 0 : 100. * status.matchedClassCount / status.totalClassCount),
 						status.matchedMethodCount, status.totalMethodCount, (status.totalMethodCount == 0 ? 0 : 100. * status.matchedMethodCount / status.totalMethodCount),
